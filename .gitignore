@@ -1,0 +1,6 @@
+# Wheel-файлы собираются локально скриптом build-wheels.sh (torch весит гигабайты, в git не кладём)
+wheels/
+
+# Логи и архивы
+build.log
+*.tar
