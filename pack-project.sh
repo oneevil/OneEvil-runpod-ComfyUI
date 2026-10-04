@@ -5,11 +5,17 @@
 
 OUTPUT_DIR="${OUTPUT_DIR:-/opt/ComfyUI/output}"
 
-# Where the script runs: in the cloud (RunPod / Vast.ai, /workspace exists) or on your own server
+# Where the script runs: in the cloud or on your own server. Detected by the platform variables
+# (start.sh saves them to /etc/rp_environment), not by /workspace, which a server may have too
 [ -f /etc/rp_environment ] && source /etc/rp_environment
-if [ -d /workspace ]; then
+CLOUD=""
+if [ -n "$RUNPOD_POD_ID" ]; then
+    CLOUD="RunPod"
+elif [ -n "$PUBLIC_IPADDR" ] || [ -n "$VAST_CONTAINERLABEL" ]; then
+    CLOUD="Vast.ai"
+fi
+if [ -n "$CLOUD" ]; then
     ON_POD=1
-    if [ -n "$PUBLIC_IPADDR" ] || [ -n "$VAST_CONTAINERLABEL" ]; then CLOUD="Vast.ai"; else CLOUD="RunPod"; fi
     EXPORT_DIR="${EXPORT_DIR:-/workspace/export}"     # on the persistent disk
 else
     ON_POD=0

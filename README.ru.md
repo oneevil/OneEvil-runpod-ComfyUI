@@ -71,6 +71,7 @@ ComfyUI запускается с параметрами `--enable-manager --use
 
 - Ubuntu 26.04 с системным Python 3.14 (должен совпадать с образом)
 - Драйвер NVIDIA 595+ и CUDA Toolkit 13.2 в `/usr/local/cuda-13.2`
+- clang (`apt install clang`): им компилируется llama-cpp-python
 - Рабочий ComfyUI в `/opt/ComfyUI` с venv и PyTorch nightly cu132
 - Docker и NVIDIA Container Toolkit (для локального теста с GPU)
 
@@ -248,7 +249,7 @@ nano /workspace/models.txt
 download-models
 ```
 
-Уже скачанные файлы пропускаются, оборванные закачки продолжаются. При `DOWNLOAD_MODELS=1` скачивание идёт в фоне при старте, лог в `/workspace/download-models.log`:
+Уже скачанные файлы пропускаются, оборванные закачки продолжаются (недокачанные файлы с Hugging Face хранятся в `models/.download-tmp`). Одновременно работает только один `download-models`: если запустить его, пока идёт скачивание при старте, он дождётся окончания и докачает только недостающее. При `DOWNLOAD_MODELS=1` скачивание идёт в фоне при старте, лог в `/workspace/download-models.log`:
 
 ```bash
 tail -f /workspace/download-models.log

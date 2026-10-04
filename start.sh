@@ -53,8 +53,10 @@ fi
 # Background model download (DOWNLOAD_MODELS=1 variable in the RunPod template).
 # ComfyUI starts right away; downloaded models appear after refreshing the page.
 if [ "$DOWNLOAD_MODELS" = "1" ]; then
-    echo "Downloading models in the background, log: /workspace/download-models.log"
-    download-models > /workspace/download-models.log 2>&1 &
+    # without /workspace (local docker run) the log goes to /tmp
+    if [ -d /workspace ]; then DL_LOG=/workspace/download-models.log; else DL_LOG=/tmp/download-models.log; fi
+    echo "Downloading models in the background, log: $DL_LOG"
+    download-models > "$DL_LOG" 2>&1 &
 fi
 
 cd /opt/ComfyUI

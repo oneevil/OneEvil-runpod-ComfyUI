@@ -130,9 +130,12 @@ COPY start.sh /start.sh
 COPY download-models.sh /usr/local/bin/download-models
 COPY pack-project.sh /usr/local/bin/pack-project
 COPY models.txt /opt/models.txt
+# PATH and template variables go to the TOP of .bashrc: the stock Ubuntu .bashrc returns early
+# for non-interactive shells, so lines appended at the end are skipped by `ssh pod <command>`
 RUN chmod +x /start.sh /usr/local/bin/download-models /usr/local/bin/pack-project && \
-    echo 'export PATH=/opt/ComfyUI/venv/bin:$PATH' >> /root/.bashrc && \
-    echo '[ -f /etc/rp_environment ] && source /etc/rp_environment' >> /root/.bashrc
+    { echo 'export PATH=/opt/ComfyUI/venv/bin:$PATH'; \
+      echo '[ -f /etc/rp_environment ] && source /etc/rp_environment'; \
+      cat /root/.bashrc; } > /tmp/bashrc && mv /tmp/bashrc /root/.bashrc
 
 EXPOSE 8188 22
 CMD ["/start.sh"]

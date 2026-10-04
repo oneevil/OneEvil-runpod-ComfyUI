@@ -1,5 +1,6 @@
 # Wheel files are built locally by build-wheels.sh (torch weighs gigabytes, not stored in git)
 wheels/
+wheels.new/
 
 # Logs and archives
 build.log

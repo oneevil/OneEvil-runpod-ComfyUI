@@ -25,8 +25,19 @@ echo "Folder: $MODELS_DIR"
 [ -n "$HF_TOKEN" ] && echo "HF_TOKEN: set" || echo "HF_TOKEN: not set (gated repositories won't download)"
 echo
 
+# One download at a time: a second run (e.g. a manual one while the startup one is still going)
+# waits for the first and then only fetches what is missing. The lock is local to the container,
+# so it lives in /tmp rather than on the network volume.
+if [ "$SIZE_MODE" = 0 ]; then
+    exec 9>/tmp/download-models.lock
+    if ! flock -n 9; then
+        echo "Another download-models is running, waiting for it to finish..."
+        flock 9
+    fi
+fi
+
 ok=0; skip=0; fail=0
-TMP="$MODELS_DIR/.download-tmp"
+TMP_ROOT="$MODELS_DIR/.download-tmp"
 total=0; need=0
 
 human() { numfmt --to=iec --suffix=B --format='%.1f' "$1" 2>/dev/null || echo "$1 B"; }
@@ -111,18 +122,20 @@ while read -r folder source name <&3 || [ -n "$folder" ]; do
 
     echo "↓ fetch   $folder/$name"
     if [ "$kind" = hf ]; then
-        rm -rf "$TMP" && mkdir -p "$TMP"
+        # a separate temp folder per file, kept on failure: hf resumes the partial download from it next time
+        tmp="$TMP_ROOT/$folder/$name"
+        mkdir -p "$tmp"
         rev_arg=()
         [ "$rev" != "main" ] && rev_arg=(--revision "$rev")
         # the "Could not set the permissions" warning on a network disk is harmless, hide it
-        if "$HF" download "$repo" "$path" "${rev_arg[@]}" --local-dir "$TMP" \
+        if "$HF" download "$repo" "$path" "${rev_arg[@]}" --local-dir "$tmp" \
                 2> >(grep -vE "Could not set the permissions|Continuing without setting permissions" >&2) \
-           && [ -f "$TMP/$path" ] && mv "$TMP/$path" "$dest"; then
+           && [ -f "$tmp/$path" ] && mv "$tmp/$path" "$dest"; then
             ok=$((ok+1))
+            rm -rf "$tmp"
         else
             echo "! error   $folder/$name"; fail=$((fail+1))
         fi
-        rm -rf "$TMP"
     else
         hdr=()
         if [[ "$url" == *civitai.com* ]] && [ -n "$CIVITAI_TOKEN" ]; then

@@ -71,6 +71,7 @@ ComfyUI is launched with `--enable-manager --use-sage-attention --fast fp16_accu
 
 - Ubuntu 26.04 with system Python 3.14 (must match the image)
 - NVIDIA driver 595+ and CUDA Toolkit 13.2 in `/usr/local/cuda-13.2`
+- clang (`apt install clang`): llama-cpp-python is compiled with it
 - A working ComfyUI in `/opt/ComfyUI` with a venv and PyTorch nightly cu132
 - Docker and NVIDIA Container Toolkit (for local GPU testing)
 
@@ -248,7 +249,7 @@ nano /workspace/models.txt
 download-models
 ```
 
-Already downloaded files are skipped, interrupted downloads are resumed. With `DOWNLOAD_MODELS=1` the download runs in the background on startup, logging to `/workspace/download-models.log`:
+Already downloaded files are skipped, interrupted downloads are resumed (Hugging Face keeps partial files in `models/.download-tmp`). Only one `download-models` runs at a time: if you start it while the startup download is still going, it waits for that one to finish and then fetches only what is missing. With `DOWNLOAD_MODELS=1` the download runs in the background on startup, logging to `/workspace/download-models.log`:
 
 ```bash
 tail -f /workspace/download-models.log
