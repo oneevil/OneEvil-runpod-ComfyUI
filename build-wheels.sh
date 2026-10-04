@@ -1,12 +1,12 @@
 #!/bin/bash
-# Собирает wheel-файлы на хосте для Docker-образа.
-# Запускать на рабочей машине (Ubuntu 26.04, CUDA 13.2, /opt/ComfyUI/venv).
-# Перезапускайте после каждого обновления torch на хосте.
+# Builds wheel files on the host for the Docker image.
+# Run on the work machine (Ubuntu 26.04, CUDA 13.2, /opt/ComfyUI/venv).
+# Re-run after every torch update on the host.
 set -e
 
 OUT="$(cd "$(dirname "$0")" && pwd)/wheels"
-ARCH="12.0"        # TORCH_CUDA_ARCH_LIST для SageAttention
-CMAKE_ARCH="120"   # CMAKE_CUDA_ARCHITECTURES для llama.cpp
+ARCH="12.0"        # TORCH_CUDA_ARCH_LIST for SageAttention
+CMAKE_ARCH="120"   # CMAKE_CUDA_ARCHITECTURES for llama.cpp
 JOBS=32
 
 source /opt/ComfyUI/venv/bin/activate
@@ -15,7 +15,7 @@ export LD_LIBRARY_PATH=/usr/local/cuda-13.2/lib64:$LD_LIBRARY_PATH
 
 rm -rf "$OUT" && mkdir -p "$OUT"
 
-echo "=== 1. torch: версии с хоста ==="
+echo "=== 1. torch: versions from the host ==="
 pip freeze | grep -E '^(torch|torchvision|torchaudio|pytorch-triton|triton)==' > "$OUT/torch-versions.txt"
 cat "$OUT/torch-versions.txt"
 pip download --no-deps --pre -r "$OUT/torch-versions.txt" \
@@ -34,5 +34,5 @@ echo "=== 3. llama-cpp-python ==="
 CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=$CMAKE_ARCH -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++" \
     pip wheel llama-cpp-python --no-deps --no-cache-dir -w "$OUT"
 
-echo "=== Готово ==="
+echo "=== Done ==="
 ls -lh "$OUT"

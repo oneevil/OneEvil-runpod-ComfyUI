@@ -1,28 +1,30 @@
 # OneEvil-runpod-ComfyUI
 
-Свой Docker-образ ComfyUI для [RunPod](https://www.runpod.io/) с предустановленными кастомными нодами, SageAttention и llama-cpp-python. Собран с нуля на чистой Ubuntu 26.04, без базовых образов RunPod и NVIDIA.
+**English** | [Русский](README.ru.md)
 
-Каждый новый под стартует сразу готовым: ничего не нужно ставить заново, модели и проекты лежат на постоянном диске.
+A custom ComfyUI Docker image for [RunPod](https://www.runpod.io/) with preinstalled custom nodes, SageAttention and llama-cpp-python. Built from scratch on a clean Ubuntu 26.04, without RunPod or NVIDIA base images.
 
-## Что внутри
+Every new pod starts ready to go: nothing needs to be reinstalled, models and projects live on persistent storage.
 
-| Компонент | Версия |
+## What's inside
+
+| Component | Version |
 |---|---|
-| ОС | Ubuntu 26.04 LTS |
-| Python | 3.14 (системный) |
+| OS | Ubuntu 26.04 LTS |
+| Python | 3.14 (system) |
 | PyTorch | nightly, CUDA 13.2 (`cu132`) |
-| SageAttention | собран под sm_120 (Blackwell) |
-| llama-cpp-python | собран с CUDA под sm_120 |
-| ComfyUI | последняя версия из `master` при сборке |
-| hf CLI, aria2 | для скачивания моделей |
+| SageAttention | built for sm_120 (Blackwell) |
+| llama-cpp-python | built with CUDA for sm_120 |
+| ComfyUI | latest `master` at build time |
+| hf CLI, aria2 | for downloading models |
 
-CUDA Toolkit в образ не входит: PyTorch несёт свои библиотеки CUDA, а SageAttention и llama-cpp-python собираются заранее на хосте и ставятся из готовых wheel-файлов.
+The CUDA Toolkit is not included in the image: PyTorch ships its own CUDA libraries, while SageAttention and llama-cpp-python are built ahead of time on the host and installed from prebuilt wheel files.
 
-### Кастомные ноды
+### Custom nodes
 
-Ставятся при сборке в последней версии из GitHub:
+Installed at build time from the latest version on GitHub:
 
-| Нода | Репозиторий |
+| Node | Repository |
 |---|---|
 | ComfyMath | [evanspearman/ComfyMath](https://github.com/evanspearman/ComfyMath) |
 | Crystools MonitorOnly | [BobRandomNumber/ComfyUI-Crystools-MonitorOnly](https://github.com/BobRandomNumber/ComfyUI-Crystools-MonitorOnly) |
@@ -30,7 +32,7 @@ CUDA Toolkit в образ не входит: PyTorch несёт свои биб
 | MMH3 UltimateUpscale | [bbaudio-2025/Comfyui-MMH3-UltimateUpscale](https://github.com/bbaudio-2025/Comfyui-MMH3-UltimateUpscale) |
 | MiniMax H3 Latent Upscaler | [LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler](https://github.com/LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler) |
 | MiniMax H3 Audio T8 | [T8mars/comfyui-minimax-h3-audio-T8](https://github.com/T8mars/comfyui-minimax-h3-audio-T8) |
-| VRGameDevGirl (ветка `Beta2.0`) | [vrgamegirl19/comfyui-vrgamedevgirl](https://github.com/vrgamegirl19/comfyui-vrgamedevgirl/tree/Beta2.0) |
+| VRGameDevGirl (branch `Beta2.0`) | [vrgamegirl19/comfyui-vrgamedevgirl](https://github.com/vrgamegirl19/comfyui-vrgamedevgirl/tree/Beta2.0) |
 | GGUF | [city96/ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF) |
 | Pixaroma | [pixaroma/ComfyUI-Pixaroma](https://github.com/pixaroma/ComfyUI-Pixaroma) |
 | Impact Pack | [ltdrdata/ComfyUI-Impact-Pack](https://github.com/ltdrdata/ComfyUI-Impact-Pack) |
@@ -39,84 +41,85 @@ CUDA Toolkit в образ не входит: PyTorch несёт свои биб
 | Memory Cleanup | [LAOGOU-666/Comfyui-Memory_Cleanup](https://github.com/LAOGOU-666/Comfyui-Memory_Cleanup) |
 | EulerDiscreteScheduler | [erosDiffusion/ComfyUI-EulerDiscreteScheduler](https://github.com/erosDiffusion/ComfyUI-EulerDiscreteScheduler) |
 
-ComfyUI запускается с параметрами `--enable-manager --use-sage-attention --fast fp16_accumulation`.
+ComfyUI is launched with `--enable-manager --use-sage-attention --fast fp16_accumulation`.
 
-## Ограничения
-
-> [!IMPORTANT]
-> SageAttention и llama-cpp-python собраны только под архитектуру **sm_120 (Blackwell)**: RTX 5090, RTX PRO 4000/4500/6000 Blackwell. На H100, A100, RTX 4090 и других картах образ работать не будет.
+## Limitations
 
 > [!IMPORTANT]
-> PyTorch собран под **CUDA 13.2**, на хосте нужен драйвер NVIDIA **595+**. На RunPod при создании пода включайте фильтр **CUDA Version 13.2**.
+> SageAttention and llama-cpp-python are built only for the **sm_120 (Blackwell)** architecture: RTX 5090, RTX PRO 4000/4500/6000 Blackwell. The image will not work on H100, A100, RTX 4090 or other GPUs.
 
-## Структура репозитория
+> [!IMPORTANT]
+> PyTorch is built for **CUDA 13.2**, the host needs NVIDIA driver **595+**. On RunPod, enable the **CUDA Version 13.2** filter when creating a pod.
+
+## Repository layout
 
 ```
 .
-├── Dockerfile           # сборка образа
-├── build-and-push.sh    # всё одной командой: wheels, сборка, проверка, push
-├── build-wheels.sh      # сборка wheel-файлов на хосте (torch, SageAttention, llama-cpp)
-├── start.sh             # запуск контейнера: SSH, постоянное хранилище, ComfyUI
-├── download-models.sh   # команда download-models
-├── models.txt           # список моделей по умолчанию
-├── pack-project.sh      # команда pack-project: перенос проектов между сервером и RunPod
-└── wheels/              # создаётся build-wheels.sh, в git не хранится
+├── Dockerfile           # image build
+├── build-and-push.sh    # everything in one command: wheels, build, test, push
+├── build-wheels.sh      # builds wheel files on the host (torch, SageAttention, llama-cpp)
+├── start.sh             # container startup: SSH, persistent storage, ComfyUI
+├── download-models.sh   # the download-models command
+├── models.txt           # default model list
+├── pack-project.sh      # the pack-project command: moving projects between your server and RunPod
+└── wheels/              # created by build-wheels.sh, not stored in git
 ```
 
-## Сборка
+## Building
 
-### Требования к машине для сборки
+### Build machine requirements
 
-- Ubuntu 26.04 с системным Python 3.14 (должен совпадать с образом)
-- Драйвер NVIDIA 595+ и CUDA Toolkit 13.2 в `/usr/local/cuda-13.2`
-- Рабочий ComfyUI в `/opt/ComfyUI` с venv и PyTorch nightly cu132
-- Docker и NVIDIA Container Toolkit (для локального теста с GPU)
+- Ubuntu 26.04 with system Python 3.14 (must match the image)
+- NVIDIA driver 595+ and CUDA Toolkit 13.2 in `/usr/local/cuda-13.2`
+- A working ComfyUI in `/opt/ComfyUI` with a venv and PyTorch nightly cu132
+- Docker and NVIDIA Container Toolkit (for local GPU testing)
 
-### Одной командой
+### One command
 
 ```bash
-./build-and-push.sh            # тег по дате (2026.10.03-1530) + latest
-./build-and-push.sh v2         # свой тег + latest
-./build-and-push.sh --wheels   # принудительно пересобрать wheel-файлы
-./build-and-push.sh --no-push  # собрать и проверить без отправки
+./build-and-push.sh            # date-based tag (2026.10.03-1530) + latest
+./build-and-push.sh v2         # custom tag + latest
+./build-and-push.sh --wheels   # force a rebuild of the wheel files
+./build-and-push.sh --no-push  # build and test without pushing
+./build-and-push.sh --cached   # don't update ComfyUI and nodes, take them from cache
 ```
 
-Логин Docker Hub задаётся в начале скрипта (`DOCKERHUB_USER`) или переменной: `DOCKERHUB_USER=login ./build-and-push.sh`. Перед первым запуском выполните `docker login`.
+The Docker Hub login is set at the top of the script (`DOCKERHUB_USER`) or via a variable: `DOCKERHUB_USER=login ./build-and-push.sh`. Run `docker login` before the first run.
 
-Скрипт сам:
-1. сравнивает версию PyTorch на хосте с `wheels/` и пересобирает wheel-файлы, только если они устарели;
-2. собирает образ, лог пишет в `build.log` и показывает, какие версии нод попали в образ;
-3. проверяет образ на GPU: torch, SageAttention, llama-cpp, команды `hf`, `download-models`, `pack-project`;
-4. если проверка прошла, отправляет образ в Docker Hub с вашим тегом и `latest`.
+The script:
+1. compares the PyTorch version on the host with `wheels/` and rebuilds the wheel files only if they are outdated;
+2. builds the image, writes the log to `build.log` and shows which ComfyUI and node versions ended up in the image;
+3. tests the image on the GPU: torch, SageAttention, llama-cpp, the `hf`, `download-models` and `pack-project` commands;
+4. if the test passes, pushes the image to Docker Hub with your tag and `latest`.
 
-Если сборка или проверка не прошли, в Docker Hub ничего не уйдёт.
+If the build or the test fails, nothing is pushed to Docker Hub.
 
-Ниже те же шаги вручную.
+The same steps done manually are below.
 
-### 1. Собрать wheel-файлы
+### 1. Build the wheel files
 
 ```bash
 ./build-wheels.sh
 ```
 
-Скрипт берёт из `/opt/ComfyUI/venv` ровно ту версию PyTorch, что стоит на хосте, скачивает её wheel-файлы и компилирует SageAttention и llama-cpp-python. Всё складывается в `wheels/`.
+The script takes exactly the PyTorch version installed in `/opt/ComfyUI/venv` on the host, downloads its wheel files and compiles SageAttention and llama-cpp-python. Everything goes into `wheels/`.
 
 > [!NOTE]
-> После каждого обновления PyTorch на хосте запускайте `build-wheels.sh` заново: SageAttention привязан к конкретной сборке torch.
+> Re-run `build-wheels.sh` after every PyTorch update on the host: SageAttention is tied to a specific torch build.
 
-### 2. Собрать образ
+### 2. Build the image
 
 ```bash
-docker build --progress=plain -t oneevil-runpod-comfyui:test . 2>&1 | tee build.log
+docker build --progress=plain --build-arg CACHE_BUST=$(date +%s) -t oneevil-runpod-comfyui:test . 2>&1 | tee build.log
 ```
 
-Проверить лог на предупреждения и посмотреть, какие версии нод попали в образ:
+Check the log for warnings and see which node versions ended up in the image:
 
 ```bash
 grep -E '^\+ |!!!' build.log
 ```
 
-### 3. Проверить локально
+### 3. Test locally
 
 ```bash
 docker run --rm --gpus all oneevil-runpod-comfyui:test python -c "
@@ -126,7 +129,7 @@ print('llama gpu:', llama_cpp.llama_supports_gpu_offload())
 "
 ```
 
-Запустить ComfyUI с моделями и результатами с хоста:
+Run ComfyUI with models and outputs from the host:
 
 ```bash
 docker run --rm -it --gpus all -p 8188:8188 \
@@ -135,11 +138,11 @@ docker run --rm -it --gpus all -p 8188:8188 \
   oneevil-runpod-comfyui:test
 ```
 
-Интерфейс откроется на `http://localhost:8188`. Папки, подключённые через `-v`, скрипт запуска не трогает.
+The UI opens at `http://localhost:8188`. The startup script leaves folders mounted via `-v` untouched.
 
-### 4. Опубликовать в Docker Hub
+### 4. Publish to Docker Hub
 
-Имя образа в Docker должно быть в нижнем регистре. Замените `<login>` на свой логин Docker Hub:
+Docker image names must be lowercase. Replace `<login>` with your Docker Hub login:
 
 ```bash
 docker login
@@ -147,136 +150,168 @@ docker tag oneevil-runpod-comfyui:test <login>/oneevil-runpod-comfyui:v1
 docker push <login>/oneevil-runpod-comfyui:v1
 ```
 
-## Настройка RunPod
+## RunPod setup
 
-### Шаблон (Templates → New Template)
+### Template (Templates → New Template)
 
-| Параметр | Значение |
+| Setting | Value |
 |---|---|
 | Container Image | `<login>/oneevil-runpod-comfyui:v1` |
-| Container Disk | 30–40 ГБ |
-| Volume Disk | 100–200 ГБ (если без Network Volume) |
-| Volume Mount Path | `/workspace` (не менять) |
+| Container Disk | 30–40 GB |
+| Volume Disk | 100–200 GB (if no Network Volume) |
+| Volume Mount Path | `/workspace` (don't change) |
 | Expose HTTP Ports | `8188` |
 | Expose TCP Ports | `22` |
 
-### Переменные окружения
+### Environment variables
 
-| Переменная | Значение | Назначение |
+| Variable | Value | Purpose |
 |---|---|---|
-| `HF_TOKEN` | `{{ RUNPOD_SECRET_HF_TOKEN }}` | токен Hugging Face для закрытых моделей |
-| `CIVITAI_TOKEN` | `{{ RUNPOD_SECRET_CIVITAI_TOKEN }}` | токен Civitai (необязательно) |
-| `DOWNLOAD_MODELS` | `1` | качать модели из списка при старте (необязательно) |
+| `HF_TOKEN` | `{{ RUNPOD_SECRET_HF_TOKEN }}` | Hugging Face token for gated models |
+| `CIVITAI_TOKEN` | `{{ RUNPOD_SECRET_CIVITAI_TOKEN }}` | Civitai token (optional) |
+| `DOWNLOAD_MODELS` | `1` | download models from the list on startup (optional) |
+| `SSH_PUBLIC_KEY` | `ssh-ed25519 AAAA...` | your public SSH key (recommended, see below) |
 
-Токены создаются в **Secrets**, в шаблон подставляются через иконку ключа.
+Tokens are created under **Secrets** and inserted into the template via the key icon.
 
 ### SSH
 
-Добавьте публичный ключ в **Settings → SSH Public Keys**. Если ключа нет:
+The `ssh.runpod.io` proxy always works, but it can't transfer files. `scp` and `pack-project` need direct SSH by IP and port (**SSH over exposed TCP**), which requires sshd running inside the container. `start.sh` starts it if it receives your public key.
+
+Create a key if you don't have one:
 
 ```bash
 ssh-keygen -t ed25519 -C "runpod"
 cat ~/.ssh/id_ed25519.pub
 ```
 
-Подключение: под → **Connect** → **SSH over exposed TCP**. Под, запущенный до добавления ключа, нужно перезапустить.
+There are two ways to pass the key to the container:
 
-## Постоянное хранилище
+1. **`SSH_PUBLIC_KEY` variable in the template** (more reliable): paste the whole line from `id_ed25519.pub` as the value. The key is public, so storing it in the template is safe.
+2. **Key in the account** (**Settings → SSH Public Keys**): RunPod passes it in the `PUBLIC_KEY` variable, but only to pods created after the key was added, and only if the **SSH Terminal Access** checkbox is enabled when launching the pod.
 
-При запуске на RunPod `start.sh` переносит папки ComfyUI в `/workspace`:
+If both variables are set, `PUBLIC_KEY` is used.
 
-| В ComfyUI | На диске |
+To verify it works: the pod log (**Logs**) should contain the line `SSH: sshd started on port 22`. If you see `!!! SSH: no public key provided` instead, the key didn't reach the container. You can check which variables the container received via the `ssh.runpod.io` proxy:
+
+```bash
+cat /proc/1/environ | tr '\0' '\n' | grep -E '^(PUBLIC_KEY|SSH_PUBLIC_KEY)='
+```
+
+Connecting: pod → **Connect** → **SSH over exposed TCP**:
+
+```bash
+ssh root@<ip> -p <port>
+```
+
+If ComfyUI isn't reachable through the RunPod proxy, you can always open it via an SSH tunnel:
+
+```bash
+ssh -N -L 8188:127.0.0.1:8188 root@<ip> -p <port>
+# then http://localhost:8188
+```
+
+## Persistent storage
+
+When running on RunPod, `start.sh` moves the ComfyUI folders to `/workspace`:
+
+| In ComfyUI | On disk |
 |---|---|
 | `/opt/ComfyUI/models` | `/workspace/models` |
 | `/opt/ComfyUI/output` | `/workspace/output` |
 | `/opt/ComfyUI/input` | `/workspace/input` |
-| `/opt/ComfyUI/user` | `/workspace/user` (workflow и настройки) |
+| `/opt/ComfyUI/user` | `/workspace/user` (workflows and settings) |
 
-С **Network Volume** данные живут независимо от пода и переживают его удаление. Без него `/workspace` — это Volume Disk пода: данные сохраняются при остановке, но удаляются вместе с подом.
+With a **Network Volume**, data lives independently of the pod and survives its deletion. Without one, `/workspace` is the pod's Volume Disk: data is kept when the pod is stopped but deleted together with the pod.
 
 > [!TIP]
-> Network Volume привязан к дата-центру. Выбирайте тот, где есть Blackwell-карты с CUDA 13.2. Модели удобно качать на самом дешёвом поде (даже CPU) с этим volume, а потом запускать GPU-под.
+> A Network Volume is tied to a data center. Pick one that has Blackwell GPUs with CUDA 13.2. It's convenient to download models on the cheapest pod (even a CPU one) with this volume attached, and then launch a GPU pod.
 
-## Модели: `download-models`
+## Models: `download-models`
 
-Список моделей лежит в `/workspace/models.txt` (при первом запуске копируется из образа), его можно править прямо на поде без пересборки.
+The model list lives in `/workspace/models.txt` (copied from the image on first start) and can be edited right on the pod without rebuilding.
 
-Формат строки: `<папка в models> <источник> [имя файла]`
+Line format: `<folder in models> <source> [file name]`
 
 ```
-# Hugging Face: hf:<репозиторий>:<путь к файлу>
+# Hugging Face: hf:<repository>:<path to file>
 diffusion_models  hf:Comfy-Org/MiniMax-H3:diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors
 
-# Прямая ссылка (для Civitai имя файла обязательно)
+# Direct link (for Civitai the file name is required)
 loras             https://civitai.com/api/download/models/123456   my_lora.safetensors
 ```
 
-Ссылка `https://huggingface.co/`**`автор/репо`**`/blob/main/`**`путь/файл`** превращается в `hf:автор/репо:путь/файл`.
+For Hugging Face any of these forms works: `hf:author/repo:path/file`, `hf:author/repo/path/file`, or just a browser link `https://huggingface.co/author/repo/blob/main/path/file`.
 
 ```bash
 nano /workspace/models.txt
 download-models
 ```
 
-Уже скачанные файлы пропускаются, оборванные закачки продолжаются. При `DOWNLOAD_MODELS=1` скачивание идёт в фоне при старте, лог в `/workspace/download-models.log`:
+Already downloaded files are skipped, interrupted downloads are resumed. With `DOWNLOAD_MODELS=1` the download runs in the background on startup, logging to `/workspace/download-models.log`:
 
 ```bash
 tail -f /workspace/download-models.log
 ```
 
-## Проекты: `pack-project`
+## Projects: `pack-project`
 
-Перенос проектов из `/opt/ComfyUI/output/<проект>` между своим сервером и RunPod. Скрипт показывает список проектов (папки `VRGDG_*` скрыты), выбор стрелками ↑/↓, Enter упаковывает в `.tar`. Работает одинаково на сервере и на поде и сам подсказывает следующие команды.
+Moves projects from `/opt/ComfyUI/output/<project>` between your own server and RunPod. The script lists projects (`VRGDG_*` folders are hidden), you pick one with ↑/↓, Enter packs it into a `.tar`. It works the same on the server and on the pod and prints the next commands to run.
 
-Установка на сервер:
+Installing on the server:
 
 ```bash
 cp pack-project.sh /usr/local/bin/pack-project
 chmod +x /usr/local/bin/pack-project
 ```
 
-### Сервер → RunPod
+### Server → RunPod
 
 ```bash
-# на сервере
+# on the server
 pack-project
-scp -P <порт> ~/comfyui-export/<проект>.tar root@<ip>:/workspace/
+scp -P <port> ~/comfyui-export/<project>.tar root@<ip>:/workspace/
 
-# на поде
-tar xf /workspace/<проект>.tar -C /opt/ComfyUI && rm /workspace/<проект>.tar
+# on the pod
+tar xf /workspace/<project>.tar -C /opt/ComfyUI && rm /workspace/<project>.tar
 ```
 
-### RunPod → сервер
+### RunPod → server
 
 ```bash
-# на поде (скрипт выведет готовую команду scp с IP и портом пода)
+# on the pod (the script prints a ready-made scp command with the pod's IP and port)
 pack-project
 
-# на сервере
-mkdir -p ~/comfyui-export && scp -P <порт> root@<ip>:/workspace/export/<проект>.tar ~/comfyui-export/
-tar xf ~/comfyui-export/<проект>.tar -C /opt/ComfyUI
+# on the server
+mkdir -p ~/comfyui-export && scp -P <port> root@<ip>:/workspace/export/<project>.tar ~/comfyui-export/
+tar xf ~/comfyui-export/<project>.tar -C /opt/ComfyUI
 ```
 
 > [!WARNING]
-> Распаковка на сервере перезаписывает файлы проекта версией с RunPod. После скачивания удалите архив на поде, чтобы не занимать место.
+> Extracting on the server overwrites the project files with the RunPod version. After downloading, delete the archive on the pod so it doesn't take up space.
 
-## Изменение набора нод
+## Changing the node set
 
-Ноды перечислены в `Dockerfile` в блоке «ФАЗА 5»:
+Nodes are listed in the `Dockerfile` in the "PHASE 5" block:
 
 ```dockerfile
-node https://github.com/автор/репозиторий.git   имя-папки   [ветка]; \
+node https://github.com/author/repository.git   folder-name   [branch]; \
 ```
 
-Ветка необязательна, без неё берётся ветка по умолчанию. Зависимости всех нод ставятся автоматически, при этом версия PyTorch зафиксирована через `constraints.txt`, так что ни одна нода не сможет её заменить.
+The branch is optional; without it the default branch is used. Dependencies of all nodes are installed automatically, while the PyTorch version is pinned via `constraints.txt`, so no node can replace it.
 
-## Обновление
+## Updating
 
-| Что обновилось | Что делать |
+The `Dockerfile` layers are split into two parts. The lower part (Ubuntu, torch, SageAttention, llama-cpp) comes from the Docker cache and is rebuilt only if the wheel files changed. The upper part (ComfyUI and all nodes) is rebuilt on every `build-and-push.sh` run: the script passes `CACHE_BUST` with the current time, so ComfyUI and the nodes are pulled fresh from GitHub.
+
+| What changed | What to do |
 |---|---|
-| ComfyUI или ноды | пересобрать образ (`docker build`), они берутся свежими |
-| PyTorch на хосте | `./build-wheels.sh`, затем пересобрать образ |
-| Список нод | правка `Dockerfile`, пересборка |
-| Список моделей | правка `/workspace/models.txt` на поде, пересборка не нужна |
+| ComfyUI or nodes | `./build-and-push.sh v2`, they are pulled fresh automatically |
+| PyTorch on the host | `./build-and-push.sh v2`, the script detects it and rebuilds the wheel files |
+| Node list | edit the `Dockerfile`, then `./build-and-push.sh v2` |
+| Model list | edit `/workspace/models.txt` on the pod, no rebuild needed |
 
-После пересборки публикуйте образ с новым тегом (`v2`, `v3`...) и меняйте тег в шаблоне RunPod.
+After building, change the tag in the RunPod template to the new one and restart the pod.
+
+> [!NOTE]
+> Updates made through ComfyUI Manager on the pod are written into the container and are lost on restart. To update ComfyUI and nodes permanently, rebuild the image.

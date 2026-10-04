@@ -1,25 +1,25 @@
-# Список моделей для download-models
-# Формат строки:  <папка в models>  <источник>  [имя файла]
+# Model list for download-models
+# Line format:  <folder in models>  <source>  [file name]
 #
-# Источник с Hugging Face:  hf:<автор/репозиторий>:<путь/к/файлу в репозитории>
-#   файл кладётся прямо в папку, без подпапок репозитория
-# Источник по ссылке:       https://...
-#   для Civitai имя файла указывайте обязательно, токен берётся из CIVITAI_TOKEN
+# Hugging Face source, any of these forms works:
+#   hf:author/repository:path/to/file
+#   hf:author/repository/path/to/file
+#   https://huggingface.co/author/repository/blob/main/path/to/file   (link from the browser)
+#   the file is placed directly in the folder, without the repository's subfolders
 #
-# Примеры (уберите # и подставьте свои):
-# diffusion_models  hf:автор/репозиторий:split_files/diffusion_models/model.safetensors
-# vae               hf:автор/репозиторий:vae/vae.safetensors
-# loras             https://civitai.com/api/download/models/123456   my_lora.safetensors
-# upscale_models    https://example.com/models/4x-upscaler.pth
+# Direct link:  https://...
+#   for Civitai the file name is required, the token is taken from CIVITAI_TOKEN
+#
+# Civitai example:
+# loras  https://civitai.com/api/download/models/123456   my_lora.safetensors
 
-# ===== MiniMax H3 =====
-LLM                    hf:Jiunsong/supergemma4-26b-uncensored-gguf-v2/supergemma4-26b-uncensored-fast-v2-Q4_K_M.gguf
-LLM                    hf:unsloth/gemma-4-26B-A4B-it-GGUF/gemma-4-26B-A4B-it-UD-IQ2_M.gguf
-LLM                    hf:unsloth/gemma-4-26B-A4B-it-GGUF/mmproj-BF16.gguf
 diffusion_models       hf:Comfy-Org/MiniMax-H3:diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors
-latent_upscale_models  hf:Konteni2/Minimax_h3_latent_Upscaler/minimax_h3_latent_upscaler_3d_bf16.safetensors
-loras                  hf:lightx2v/Minimax-h3-Turbo/minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors
-loras                  hf:lightx2v/Minimax-h3-Turbo/minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors
-text_encoders          hf:Comfy-Org/MiniMax-H3/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
-vae                    hf:Comfy-Org/MiniMax-H3/vae/minimax_h3_audio_vae_fp32.safetensors
-vae                    hf:Comfy-Org/MiniMax-H3/vae/minimax_h3_video_vae_fp16.safetensors
+text_encoders          hf:Comfy-Org/MiniMax-H3:text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
+vae                    hf:Comfy-Org/MiniMax-H3:vae/minimax_h3_video_vae_fp16.safetensors
+vae                    hf:Comfy-Org/MiniMax-H3:vae/minimax_h3_audio_vae_fp32.safetensors
+latent_upscale_models  hf:Konteni2/Minimax_h3_latent_Upscaler:minimax_h3_latent_upscaler_3d_bf16.safetensors
+loras                  hf:lightx2v/Minimax-h3-Turbo:minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors
+loras                  hf:lightx2v/Minimax-h3-Turbo:minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors
+LLM                    hf:Jiunsong/supergemma4-26b-uncensored-gguf-v2:supergemma4-26b-uncensored-fast-v2-Q4_K_M.gguf
+LLM                    hf:unsloth/gemma-4-26B-A4B-it-GGUF:gemma-4-26B-A4B-it-UD-IQ2_M.gguf
+LLM                    hf:unsloth/gemma-4-26B-A4B-it-GGUF:mmproj-BF16.gguf

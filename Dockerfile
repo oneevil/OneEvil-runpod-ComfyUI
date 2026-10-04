@@ -1,12 +1,14 @@
+# syntax=docker/dockerfile:1
 # OneEvil-runpod-ComfyUI
 FROM ubuntu:26.04
 
 LABEL org.opencontainers.image.title="OneEvil-runpod-ComfyUI" \
-      org.opencontainers.image.description="ComfyUI для RunPod: Ubuntu 26.04, PyTorch nightly cu132, SageAttention, llama-cpp, кастомные ноды"
+      org.opencontainers.image.description="ComfyUI for RunPod: Ubuntu 26.04, PyTorch nightly cu132, SageAttention, llama-cpp, custom nodes"
 
-# Образ без CUDA Toolkit: torch, SageAttention и llama-cpp-python ставятся
-# из готовых wheel-файлов, собранных на хосте (папка wheels/ рядом с Dockerfile).
-# Хост и образ должны совпадать: Ubuntu 26.04, системный Python 3.14.
+# Image without CUDA Toolkit: torch, SageAttention and llama-cpp-python are installed
+# from prebuilt wheel files built on the host (the wheels/ folder next to the Dockerfile,
+# mounted only during the build and never included in the image).
+# Host and image must match: Ubuntu 26.04, system Python 3.14.
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
@@ -14,7 +16,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH=/opt/ComfyUI/venv/bin:$PATH
 
 ##############################################################
-# Системные пакеты (драйвер НЕ ставим: его даёт хост)
+# System packages (NO driver: the host provides it)
 ##############################################################
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates wget curl git build-essential pkg-config \
@@ -24,30 +26,54 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 ##############################################################
-# ФАЗА 1: ComfyUI + venv
+# Layer order: rarely changing things first (venv, torch, wheels),
+# then what gets updated on every build (ComfyUI, nodes).
+# This way updating ComfyUI doesn't re-download gigabytes of torch.
 ##############################################################
-RUN git clone https://github.com/comfyanonymous/ComfyUI.git /opt/ComfyUI && \
+
+# venv
+RUN mkdir -p /opt/ComfyUI && \
     python3 -m venv /opt/ComfyUI/venv && \
     pip install --upgrade pip && \
     python --version
 WORKDIR /opt/ComfyUI
 
-##############################################################
-# Wheel-файлы с хоста
-##############################################################
-COPY wheels/ /wheels/
-RUN cp /wheels/torch-versions.txt /constraints.txt && cat /constraints.txt
+# Wheel files from the host are NOT copied into the image: the wheels/ folder is mounted
+# only during installation (RUN --mount), which makes the image 2-3 GB lighter.
+# Only the list of torch versions gets into the image, to pin them via constraints.
+COPY wheels/torch-versions.txt /constraints.txt
+RUN cat /constraints.txt
 
-# torch/torchvision/torchaudio/triton: ровно те версии, что на хосте (из /wheels),
-# их зависимости nvidia-* берутся из индексов
-RUN pip install --pre --find-links /wheels -r /constraints.txt \
+# torch/torchvision/torchaudio/triton: exactly the versions from the host (from /wheels),
+# their nvidia-* dependencies come from the indexes
+RUN --mount=type=bind,source=wheels,target=/wheels \
+    pip install --pre --find-links /wheels -r /constraints.txt \
         --extra-index-url https://download.pytorch.org/whl/nightly/cu132
 
-# Библиотеки CUDA из pip-пакетов nvidia-* делаем видимыми для всей системы:
-# llama-cpp был собран с toolkit и ищет libcudart/libcublas, в образе они только здесь
+# Make CUDA libraries from the nvidia-* pip packages visible system-wide:
+# llama-cpp was built with the toolkit and looks for libcudart/libcublas, which only live here in the image
 RUN find /opt/ComfyUI/venv -path '*/nvidia/*' -name 'lib*.so*' -printf '%h\n' | sort -u \
         > /etc/ld.so.conf.d/nvidia-pip.conf && \
     cat /etc/ld.so.conf.d/nvidia-pip.conf && ldconfig
+
+# SageAttention and llama-cpp-python from prebuilt wheels
+RUN --mount=type=bind,source=wheels,target=/wheels \
+    pip install /wheels/sageattention-*.whl /wheels/llama_cpp_python-*.whl -c /constraints.txt
+
+##############################################################
+# UPDATABLE PART
+# CACHE_BUST changes on every build (build-and-push.sh passes the current time),
+# so everything below is rebuilt: fresh ComfyUI and fresh nodes.
+##############################################################
+ARG CACHE_BUST=0
+RUN echo "Build: ${CACHE_BUST}"
+
+# ComfyUI (latest version of the default branch). Cloned into the folder that already holds the venv
+RUN git init -q && \
+    git remote add origin https://github.com/comfyanonymous/ComfyUI.git && \
+    git fetch -q --depth 1 origin HEAD && \
+    git checkout -q -f FETCH_HEAD && \
+    echo "+ ComfyUI @ $(git rev-parse --short HEAD)"
 
 RUN pip install -r requirements.txt -c /constraints.txt && \
     pip install -r manager_requirements.txt -c /constraints.txt && \
@@ -56,14 +82,9 @@ RUN pip install -r requirements.txt -c /constraints.txt && \
     hf --help > /dev/null && echo "+ hf CLI OK"
 
 ##############################################################
-# ФАЗЫ 2-3: SageAttention и llama-cpp-python из готовых wheel
-##############################################################
-RUN pip install /wheels/sageattention-*.whl /wheels/llama_cpp_python-*.whl -c /constraints.txt
-
-##############################################################
-# ФАЗА 5: Ноды (всегда последние версии)
-# Формат: node <репозиторий> <папка> [ветка]; папки названы так же, как на рабочей машине
-# Без ветки берётся ветка по умолчанию (обычно main/master)
+# PHASE 5: Nodes (always the latest versions)
+# Format: node <repository> <folder> [branch]; folders are named the same as on the work machine
+# Without a branch, the default branch is used (usually main/master)
 ##############################################################
 RUN set -e; cd custom_nodes; \
     node() { \
@@ -85,18 +106,11 @@ RUN set -e; cd custom_nodes; \
     node https://github.com/LAOGOU-666/Comfyui-Memory_Cleanup.git                comfyui_memory_cleanup; \
     node https://github.com/erosDiffusion/ComfyUI-EulerDiscreteScheduler.git     erosdiffusion-eulerflowmatchingdiscretescheduler
 
-# Патчи LTXVideo из шпаргалки. Код ноды обновляется, поэтому патчи мягкие:
-# если файла/строки уже нет, сборка не падает, а в логе будет предупреждение
-RUN cd custom_nodes/ComfyUI-LTXVideo && \
-    sed -i 's/^ninja~=.*/ninja/' requirements.txt && \
-    if grep -qE '^ *pad,$' pyramid_blending.py 2>/dev/null; then \
-      sed -i -e '/^ *pad,$/d' -e '1i import torch.nn.functional as _kfx\npad = _kfx.pad' pyramid_blending.py && \
-      echo "+ LTX patch: pyramid_blending.py"; \
-    else \
-      echo "!!! LTX patch: pyramid_blending.py не требует патча или изменился, проверьте вручную"; \
-    fi
+# LTXVideo patch: remove the hard pin of ninja to an old version.
+# (The pyramid_blending.py patch is no longer needed: LTXVideo dropped the pad import from kornia.)
+RUN sed -i 's/^ninja~=.*/ninja/' custom_nodes/ComfyUI-LTXVideo/requirements.txt
 
-# Зависимости всех нод; torch зафиксирован через constraints, сборка упадёт при конфликте
+# Dependencies of all nodes; torch is pinned via constraints, the build fails on a conflict
 RUN set -e; cd custom_nodes; \
     for d in */; do \
       if [ -f "$d/requirements.txt" ]; then \
@@ -105,12 +119,12 @@ RUN set -e; cd custom_nodes; \
       fi; \
     done
 
-# Форк kornia ставим последним, чтобы ноды его не перезаписали
+# The kornia fork is installed last so the nodes don't overwrite it
 RUN pip install --no-deps --force-reinstall git+https://github.com/AbhiKhoyani/kornia@main && \
     python -c "import torch; print('torch', torch.__version__)"
 
 ##############################################################
-# ФАЗА 6: Автозапуск (вместо systemd)
+# PHASE 6: Autostart (instead of systemd)
 ##############################################################
 COPY start.sh /start.sh
 COPY download-models.sh /usr/local/bin/download-models

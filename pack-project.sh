@@ -1,24 +1,25 @@
 #!/bin/bash
-# Выбор проекта из /opt/ComfyUI/output стрелками и упаковка в tar для переноса на RunPod.
-# Папки, начинающиеся на VRGDG_, не показываются.
-#   ↑/↓ — выбор, Enter — упаковать, q — выход
+# Pick a project from /opt/ComfyUI/output with the arrow keys and pack it into a tar for transfer to RunPod.
+# Folders starting with VRGDG_ are hidden.
+#   ↑/↓ — select, Enter — pack, q — quit
 
 OUTPUT_DIR="${OUTPUT_DIR:-/opt/ComfyUI/output}"
 
-# Где запущен скрипт: на поде RunPod (есть /workspace) или на своём сервере
+# Where the script runs: in the cloud (RunPod / Vast.ai, /workspace exists) or on your own server
+[ -f /etc/rp_environment ] && source /etc/rp_environment
 if [ -d /workspace ]; then
     ON_POD=1
-    [ -f /etc/rp_environment ] && source /etc/rp_environment
-    EXPORT_DIR="${EXPORT_DIR:-/workspace/export}"     # на постоянном диске, не на маленьком Container Disk
+    if [ -n "$PUBLIC_IPADDR" ] || [ -n "$VAST_CONTAINERLABEL" ]; then CLOUD="Vast.ai"; else CLOUD="RunPod"; fi
+    EXPORT_DIR="${EXPORT_DIR:-/workspace/export}"     # on the persistent disk
 else
     ON_POD=0
     EXPORT_DIR="${EXPORT_DIR:-$HOME/comfyui-export}"
 fi
 
-[ -d "$OUTPUT_DIR" ] || { echo "Нет папки $OUTPUT_DIR"; exit 1; }
+[ -d "$OUTPUT_DIR" ] || { echo "Folder not found: $OUTPUT_DIR"; exit 1; }
 
-# Проекты: новые сверху. Glob, а не find: так работают и симлинки
-# (если output или папки проектов — ссылки на другой диск)
+# Projects: newest first. Glob rather than find, so symlinks work too
+# (if output or project folders are links to another disk)
 mapfile -t projects < <(
     for d in "$OUTPUT_DIR"/*/; do
         [ -d "$d" ] || continue
@@ -28,9 +29,9 @@ mapfile -t projects < <(
     done | sort -rn | cut -f2-
 )
 n=${#projects[@]}
-[ "$n" -eq 0 ] && { echo "Проектов не найдено в $OUTPUT_DIR"; exit 0; }
+[ "$n" -eq 0 ] && { echo "No projects found in $OUTPUT_DIR"; exit 0; }
 
-echo "Считаю размеры..."
+echo "Calculating sizes..."
 labels=()
 for p in "${projects[@]}"; do
     size=$(du -shL "$OUTPUT_DIR/$p" 2>/dev/null | cut -f1)
@@ -38,7 +39,7 @@ for p in "${projects[@]}"; do
     labels+=("$(printf '%-7s %s   %s' "$size" "$date" "$p")")
 done
 
-# ---------- меню ----------
+# ---------- menu ----------
 sel=0
 top=0
 tput civis
@@ -51,7 +52,7 @@ draw() {
     (( sel >= top + rows )) && top=$(( sel - rows + 1 ))
 
     clear
-    echo "Проекты в $OUTPUT_DIR ($n)   ↑/↓ выбор, Enter упаковать, q выход"
+    echo "Projects in $OUTPUT_DIR ($n)   ↑/↓ select, Enter pack, q quit"
     echo
     local i
     for (( i = top; i < n && i < top + rows; i++ )); do
@@ -61,7 +62,7 @@ draw() {
             printf '   %s\n' "${labels[$i]}"
         fi
     done
-    (( n > rows )) && echo && echo "   ... $(( sel + 1 )) из $n"
+    (( n > rows )) && echo && echo "   ... $(( sel + 1 )) of $n"
 }
 
 while true; do
@@ -78,48 +79,48 @@ while true; do
     elif [[ "$key" == "" ]]; then
         break
     elif [[ "$key" == "q" || "$key" == "Q" ]]; then
-        tput cnorm; clear; echo "Отменено"; exit 0
+        tput cnorm; clear; echo "Cancelled"; exit 0
     fi
 done
 
 tput cnorm
 clear
 
-# ---------- упаковка ----------
+# ---------- packing ----------
 project="${projects[$sel]}"
 mkdir -p "$EXPORT_DIR"
 archive="$EXPORT_DIR/$project.tar"
 
-echo "Проект: $project"
-echo "Архив:  $archive"
+echo "Project: $project"
+echo "Archive: $archive"
 echo
-echo "Упаковываю..."
+echo "Packing..."
 
-# путь внутри архива: output/<проект>, распаковывается из /opt/ComfyUI
-# -h: если внутри ссылки, в архив попадают сами файлы, а не ссылки
+# path inside the archive: output/<project>, extracted from /opt/ComfyUI
+# -h: if there are links inside, the actual files go into the archive, not the links
 if tar chf "$archive" -C "$(dirname "$OUTPUT_DIR")" "$(basename "$OUTPUT_DIR")/$project"; then
-    echo "Готово: $(du -h "$archive" | cut -f1)"
+    echo "Done: $(du -h "$archive" | cut -f1)"
     echo
     if [ "$ON_POD" = 1 ]; then
-        ip="${RUNPOD_PUBLIC_IP:-<IP>}"
-        port="${RUNPOD_TCP_PORT_22:-<ПОРТ>}"
-        echo "Забрать на свой сервер (выполнить НА СЕРВЕРЕ):"
+        ip="${RUNPOD_PUBLIC_IP:-${PUBLIC_IPADDR:-<IP>}}"
+        port="${RUNPOD_TCP_PORT_22:-${VAST_TCP_PORT_22:-<PORT>}}"
+        echo "[$CLOUD] Fetch to your server (run ON THE SERVER):"
         echo "  mkdir -p ~/comfyui-export && scp -P $port \"root@$ip:$archive\" ~/comfyui-export/"
         echo
-        echo "Распаковать на сервере (файлы проекта обновятся версией с RunPod):"
+        echo "Extract on the server (project files will be updated with the cloud version):"
         echo "  tar xf \"\$HOME/comfyui-export/$project.tar\" -C /opt/ComfyUI"
         echo
-        echo "После скачивания удалите архив на поде, он занимает место на диске:"
+        echo "After downloading, delete the archive in the cloud, it takes up disk space:"
         echo "  rm \"$archive\""
     else
-        echo "Отправить на RunPod (IP и порт: под → Connect → SSH over exposed TCP):"
-        echo "  scp -P <ПОРТ> \"$archive\" root@<IP>:/workspace/"
+        echo "Send to RunPod / Vast.ai (IP and external SSH port from the instance panel):"
+        echo "  scp -P <PORT> \"$archive\" root@<IP>:/workspace/"
         echo
-        echo "Распаковать на поде:"
+        echo "Extract in the cloud:"
         echo "  tar xf \"/workspace/$project.tar\" -C /opt/ComfyUI && rm \"/workspace/$project.tar\""
     fi
 else
-    echo "Ошибка упаковки"
+    echo "Packing failed"
     rm -f "$archive"
     exit 1
 fi
