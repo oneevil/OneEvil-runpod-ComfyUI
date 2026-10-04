@@ -62,6 +62,7 @@ ComfyUI is launched with `--enable-manager --use-sage-attention --fast fp16_accu
 ├── download-models.sh   # the download-models command
 ├── models.txt           # default model list
 ├── pack-project.sh      # the pack-project command: moving projects between your server and RunPod
+├── fs_compat.py         # Python patch: file copying in nodes works on a network volume
 └── wheels/              # created by build-wheels.sh, not stored in git
 ```
 
@@ -225,6 +226,8 @@ When running on RunPod, `start.sh` moves the ComfyUI folders to `/workspace`:
 
 With a **Network Volume**, data lives independently of the pod and survives its deletion. Without one, `/workspace` is the pod's Volume Disk: data is kept when the pod is stopped but deleted together with the pod.
 
+A Network Volume doesn't allow changing file permissions and timestamps, even for root. Because of that, `shutil.copy2` in nodes would fail with `[Errno 1] Operation not permitted` after the data is already copied. The image includes `fs_compat.py`, which makes Python skip copying these attributes when the disk refuses it; the files themselves are copied as usual.
+
 > [!TIP]
 > A Network Volume is tied to a data center. Pick one that has Blackwell GPUs with CUDA 13.2. It's convenient to download models on the cheapest pod (even a CPU one) with this volume attached, and then launch a GPU pod.
 
@@ -257,7 +260,9 @@ tail -f /workspace/download-models.log
 
 ## Projects: `pack-project`
 
-Moves projects from `/opt/ComfyUI/output/<project>` between your own server and RunPod. The script lists projects (`VRGDG_*` folders are hidden), you pick one with ↑/↓, Enter packs it into a `.tar`. It works the same on the server and on the pod and prints the next commands to run.
+Moves projects from `/opt/ComfyUI/output/<project>` between your own server and RunPod. The script lists projects (`VRGDG_*` folders are hidden), you pick one with ↑/↓, Enter packs it into a `.tar`. `pack-project <project>.tar` unpacks an archive into output. It works the same on the server and on the pod and prints the next commands to run.
+
+When unpacking on the pod, tar can't set file permissions and timestamps on the network volume and complains about it; the script filters out these harmless messages and shows only real errors. On the pod the archive is removed after a successful unpack, on the server it is kept.
 
 Installing on the server:
 
@@ -274,7 +279,7 @@ pack-project
 scp -P <port> ~/comfyui-export/<project>.tar root@<ip>:/workspace/
 
 # on the pod
-tar xf /workspace/<project>.tar -C /opt/ComfyUI && rm /workspace/<project>.tar
+pack-project /workspace/<project>.tar
 ```
 
 ### RunPod → server
@@ -285,7 +290,7 @@ pack-project
 
 # on the server
 mkdir -p ~/comfyui-export && scp -P <port> root@<ip>:/workspace/export/<project>.tar ~/comfyui-export/
-tar xf ~/comfyui-export/<project>.tar -C /opt/ComfyUI
+pack-project ~/comfyui-export/<project>.tar
 ```
 
 > [!WARNING]

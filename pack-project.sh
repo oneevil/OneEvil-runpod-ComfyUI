@@ -1,7 +1,8 @@
 #!/bin/bash
-# Pick a project from /opt/ComfyUI/output with the arrow keys and pack it into a tar for transfer to RunPod.
-# Folders starting with VRGDG_ are hidden.
-#   ↑/↓ — select, Enter — pack, q — quit
+# Moving projects from /opt/ComfyUI/output between your server and RunPod / Vast.ai.
+#   pack-project                 - pick a project with the arrow keys and pack it into a tar
+#                                  (↑/↓ — select, Enter — pack, q — quit; folders VRGDG_* are hidden)
+#   pack-project <project>.tar   - unpack an archive made by pack-project into output
 
 OUTPUT_DIR="${OUTPUT_DIR:-/opt/ComfyUI/output}"
 
@@ -23,6 +24,48 @@ else
 fi
 
 [ -d "$OUTPUT_DIR" ] || { echo "Folder not found: $OUTPUT_DIR"; exit 1; }
+
+# ---------- unpacking ----------
+if [ -n "$1" ]; then
+    archive="$1"
+    [ -f "$archive" ] || { echo "Archive not found: $archive"; exit 1; }
+    project="$(tar tf "$archive" 2>/dev/null | head -1 | cut -d/ -f2)"
+    [ -n "$project" ] || { echo "Not a pack-project archive: $archive"; exit 1; }
+
+    # Paths inside the archive are output/<project>. Extract with --strip-components=1 straight into
+    # the real output folder: newer GNU tar refuses to write through a symlink that leads outside -C
+    # ("Invalid cross-device link"), and on the pod /opt/ComfyUI/output is a link to /workspace/output
+    dest="$(readlink -f "$OUTPUT_DIR")"
+    echo "Archive: $archive"
+    echo "Project: $dest/$project"
+    echo
+    echo "Unpacking..."
+
+    # The network volume forbids chown/chmod/utime even for root: tar doesn't restore them where it can
+    # be told not to, and complains about directory modes anyway. The data is extracted by then,
+    # so those messages are filtered out and only real errors count.
+    errlog="$(mktemp)"
+    tar xf "$archive" --strip-components=1 --no-same-owner --no-same-permissions -m -C "$dest" 2> "$errlog"
+    rc=$?
+    errors="$(grep -vE 'Cannot (change mode|change ownership|utime)|Exiting with failure status due to previous errors' "$errlog")"
+    # a failure counts as harmless only if tar explained it and every message is about metadata
+    if [ "$rc" -ne 0 ] && { [ -n "$errors" ] || [ ! -s "$errlog" ]; }; then
+        rm -f "$errlog"
+        [ -n "$errors" ] && echo "$errors"
+        echo
+        echo "Unpacking failed, the archive is kept: $archive"
+        exit 1
+    fi
+    rm -f "$errlog"
+
+    echo "Done: $(du -sh "$dest/$project" 2>/dev/null | cut -f1)"
+    if [ "$ON_POD" = 1 ]; then
+        rm -f "$archive" && echo "Archive removed to free disk space"
+    else
+        echo "Remove the archive if you no longer need it:  rm \"$archive\""
+    fi
+    exit 0
+fi
 
 # Projects: newest first. Glob rather than find, so symlinks work too
 # (if output or project folders are links to another disk)
@@ -102,7 +145,7 @@ echo "Archive: $archive"
 echo
 echo "Packing..."
 
-# path inside the archive: output/<project>, extracted from /opt/ComfyUI
+# path inside the archive: output/<project>; `pack-project <archive>` unpacks it
 # -h: if there are links inside, the actual files go into the archive, not the links
 if tar chf "$archive" -C "$(dirname "$OUTPUT_DIR")" "$(basename "$OUTPUT_DIR")/$project"; then
     echo "Done: $(du -h "$archive" | cut -f1)"
@@ -113,8 +156,8 @@ if tar chf "$archive" -C "$(dirname "$OUTPUT_DIR")" "$(basename "$OUTPUT_DIR")/$
         echo "[$CLOUD] Fetch to your server (run ON THE SERVER):"
         echo "  mkdir -p ~/comfyui-export && scp -P $port \"root@$ip:$archive\" ~/comfyui-export/"
         echo
-        echo "Extract on the server (project files will be updated with the cloud version):"
-        echo "  tar xf \"\$HOME/comfyui-export/$project.tar\" -C /opt/ComfyUI"
+        echo "Unpack on the server (project files will be updated with the cloud version):"
+        echo "  pack-project \"\$HOME/comfyui-export/$project.tar\""
         echo
         echo "After downloading, delete the archive in the cloud, it takes up disk space:"
         echo "  rm \"$archive\""
@@ -122,8 +165,8 @@ if tar chf "$archive" -C "$(dirname "$OUTPUT_DIR")" "$(basename "$OUTPUT_DIR")/$
         echo "Send to RunPod / Vast.ai (IP and external SSH port from the instance panel):"
         echo "  scp -P <PORT> \"$archive\" root@<IP>:/workspace/"
         echo
-        echo "Extract in the cloud:"
-        echo "  tar xf \"/workspace/$project.tar\" -C /opt/ComfyUI && rm \"/workspace/$project.tar\""
+        echo "Unpack in the cloud (the archive is removed afterwards):"
+        echo "  pack-project \"/workspace/$project.tar\""
     fi
 else
     echo "Packing failed"

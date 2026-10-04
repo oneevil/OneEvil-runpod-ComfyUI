@@ -47,7 +47,7 @@ echo "Image:  $REPO:$TAG (+ latest)"
 [ "$PUSH" = 0 ] && echo "Mode:   no push to Docker Hub"
 
 # ---------- checks ----------
-for f in Dockerfile start.sh build-wheels.sh download-models.sh models.txt pack-project.sh; do
+for f in Dockerfile start.sh build-wheels.sh download-models.sh models.txt pack-project.sh fs_compat.py; do
     [ -f "$f" ] || fail "Missing file $f"
 done
 command -v docker >/dev/null || fail "Docker is not installed"
@@ -97,7 +97,8 @@ fi
 # ---------- 3. test ----------
 step "3/4 Testing"
 if ! docker run --rm --gpus all "$LOCAL" python -c "
-import torch, sageattention, llama_cpp
+import shutil, torch, sageattention, llama_cpp
+assert hasattr(shutil.copystat, '__wrapped__'), 'fs_compat patch is not loaded'
 assert torch.cuda.is_available(), 'CUDA is not available'
 assert llama_cpp.llama_supports_gpu_offload(), 'llama-cpp has no GPU support'
 print('torch      ', torch.__version__)

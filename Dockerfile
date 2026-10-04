@@ -130,6 +130,15 @@ COPY start.sh /start.sh
 COPY download-models.sh /usr/local/bin/download-models
 COPY pack-project.sh /usr/local/bin/pack-project
 COPY models.txt /opt/models.txt
+
+# shutil patch for network volumes (see fs_compat.py), loaded at startup by every venv Python.
+# A .pth file rather than sitecustomize.py: Ubuntu ships its own sitecustomize, which would shadow ours
+COPY fs_compat.py /tmp/fs_compat.py
+RUN SP="$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')" && \
+    mv /tmp/fs_compat.py "$SP/fs_compat.py" && \
+    echo 'import fs_compat' > "$SP/fs_compat.pth" && \
+    python -c "import shutil; assert hasattr(shutil.copystat, '__wrapped__')" && echo "+ fs_compat OK"
+
 # PATH and template variables go to the TOP of .bashrc: the stock Ubuntu .bashrc returns early
 # for non-interactive shells, so lines appended at the end are skipped by `ssh pod <command>`
 RUN chmod +x /start.sh /usr/local/bin/download-models /usr/local/bin/pack-project && \
