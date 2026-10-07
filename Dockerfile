@@ -94,12 +94,12 @@ RUN set -e; cd custom_nodes; \
     node https://github.com/evanspearman/ComfyMath.git                           ComfyMath; \
     node https://github.com/BobRandomNumber/ComfyUI-Crystools-MonitorOnly.git    ComfyUI-Crystools-MonitorOnly; \
     node https://github.com/Lightricks/ComfyUI-LTXVideo.git                      ComfyUI-LTXVideo; \
+    node https://github.com/Luisacaotica/ComfyUI-MiniMaxH3Mod.git                ComfyUI-MiniMaxH3Mod; \
     node https://github.com/bbaudio-2025/Comfyui-MMH3-UltimateUpscale.git        Comfyui-MMH3-UltimateUpscale; \
     node https://github.com/LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler.git    Comfyui_Minimax_h3_latent_Upscaler; \
     node https://github.com/T8mars/comfyui-minimax-h3-audio-T8.git               comfyui-minimax-h3-audio-T8; \
     node https://github.com/vrgamegirl19/comfyui-vrgamedevgirl.git               comfyui-vrgamedevgirl              Beta2.0; \
     node https://github.com/city96/ComfyUI-GGUF.git                              ComfyUI-GGUF; \
-    node https://github.com/pixaroma/ComfyUI-Pixaroma.git                        ComfyUI-Pixaroma; \
     node https://github.com/ltdrdata/ComfyUI-Impact-Pack.git                     comfyui-impact-pack; \
     node https://github.com/kijai/ComfyUI-KJNodes.git                            comfyui-kjnodes; \
     node https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git             comfyui-videohelpersuite; \
