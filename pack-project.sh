@@ -80,6 +80,9 @@ mapfile -t projects < <(
 n=${#projects[@]}
 [ "$n" -eq 0 ] && { echo "No projects found in $OUTPUT_DIR"; exit 0; }
 
+# the menu needs a terminal: without one `read` gets EOF, which looks like Enter and packs the first project
+[ -t 0 ] || { echo "Interactive terminal required (use ssh -t)"; exit 1; }
+
 echo "Calculating sizes..."
 labels=()
 for p in "${projects[@]}"; do

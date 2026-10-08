@@ -1,6 +1,6 @@
 #!/bin/bash
 # Builds wheel files on the host for the Docker image.
-# Run on the work machine (Ubuntu 26.04, CUDA 13.2, /opt/ComfyUI/venv).
+# Run on the work machine (Ubuntu 26.04, CUDA 13.4, /opt/ComfyUI/venv).
 # Re-run after every torch update on the host.
 set -e
 
@@ -11,8 +11,8 @@ CMAKE_ARCH="120"   # CMAKE_CUDA_ARCHITECTURES for llama.cpp
 JOBS=32
 
 source /opt/ComfyUI/venv/bin/activate
-export PATH=/usr/local/cuda-13.2/bin:$PATH
-export LD_LIBRARY_PATH=/usr/local/cuda-13.2/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+export PATH=/usr/local/cuda-13.4/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda-13.4/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
 
 rm -rf "$OUT" && mkdir -p "$OUT"
 
@@ -20,7 +20,7 @@ echo "=== 1. torch: versions from the host ==="
 pip freeze | grep -E '^(torch|torchvision|torchaudio|pytorch-triton|triton)==' > "$OUT/torch-versions.txt"
 cat "$OUT/torch-versions.txt"
 pip download --no-deps --pre -r "$OUT/torch-versions.txt" \
-    --index-url https://download.pytorch.org/whl/nightly/cu132 -d "$OUT"
+    --index-url https://download.pytorch.org/whl/nightly/cu134 -d "$OUT"
 
 echo "=== 2. SageAttention ==="
 if [ ! -d /opt/SageAttention ]; then
@@ -35,7 +35,8 @@ export CXX_APPEND_FLAGS="-std=c++20" NVCC_APPEND_FLAGS="-std=c++20" \
 pip wheel . --no-build-isolation --no-deps -w "$OUT"
 
 echo "=== 3. llama-cpp-python ==="
-CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=$CMAKE_ARCH -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++" \
+unset NVCC_APPEND_FLAGS CXX_APPEND_FLAGS NVCC_THREADS
+CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=$CMAKE_ARCH -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DGGML_ALL_WARNINGS=OFF" \
     pip wheel llama-cpp-python --no-deps --no-cache-dir -w "$OUT"
 
 rm -rf "$DEST" && mv "$OUT" "$DEST"

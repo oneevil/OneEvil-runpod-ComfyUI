@@ -101,7 +101,7 @@ while read -r folder source name <&3 || [ -n "$folder" ]; do
 
     if [ "$SIZE_MODE" = 1 ]; then
         if [ "$kind" = hf ]; then size=$(hf_size "$repo" "$path" "$rev"); else size=$(url_size "$url"); fi
-        if [ "$size" -lt 0 ] 2>/dev/null || [ -z "$size" ]; then
+        if ! [[ "$size" =~ ^[0-9]+$ ]]; then
             printf '%10s   %s/%s\n' "?" "$folder" "$name"; fail=$((fail+1)); continue
         fi
         total=$((total+size))

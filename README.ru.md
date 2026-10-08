@@ -12,7 +12,7 @@
 |---|---|
 | ОС | Ubuntu 26.04 LTS |
 | Python | 3.14 (системный) |
-| PyTorch | nightly, CUDA 13.2 (`cu132`) |
+| PyTorch | nightly, CUDA 13.4 (`cu134`) |
 | SageAttention | собран под sm_120 (Blackwell) |
 | llama-cpp-python | собран с CUDA под sm_120 |
 | ComfyUI | последняя версия из `master` при сборке |
@@ -49,7 +49,7 @@ ComfyUI запускается с параметрами `--enable-manager --use
 > SageAttention и llama-cpp-python собраны только под архитектуру **sm_120 (Blackwell)**: RTX 5090, RTX PRO 4000/4500/6000 Blackwell. На H100, A100, RTX 4090 и других картах образ работать не будет.
 
 > [!IMPORTANT]
-> PyTorch собран под **CUDA 13.2**, на хосте нужен драйвер NVIDIA **595+**. На RunPod при создании пода включайте фильтр **CUDA Version 13.2**.
+> PyTorch собран под **CUDA 13.4**, на хосте нужен драйвер NVIDIA **615+**. На RunPod при создании пода включайте фильтр **CUDA Version 13.4**.
 
 ## Структура репозитория
 
@@ -71,9 +71,9 @@ ComfyUI запускается с параметрами `--enable-manager --use
 ### Требования к машине для сборки
 
 - Ubuntu 26.04 с системным Python 3.14 (должен совпадать с образом)
-- Драйвер NVIDIA 595+ и CUDA Toolkit 13.2 в `/usr/local/cuda-13.2`
+- Драйвер NVIDIA 615+ и CUDA Toolkit 13.4 в `/usr/local/cuda-13.4`
 - clang (`apt install clang`): им компилируется llama-cpp-python
-- Рабочий ComfyUI в `/opt/ComfyUI` с venv и PyTorch nightly cu132
+- Рабочий ComfyUI в `/opt/ComfyUI` с venv и PyTorch nightly cu134
 - Docker и NVIDIA Container Toolkit (для локального теста с GPU)
 
 ### Одной командой
@@ -229,7 +229,7 @@ ssh -N -L 8188:127.0.0.1:8188 root@<ip> -p <порт>
 Network Volume не разрешает менять права и время файлов даже root. Из-за этого `shutil.copy2` в нодах падал бы с ошибкой `[Errno 1] Operation not permitted`, когда данные уже скопированы. В образе есть `fs_compat.py`: он заставляет Python пропускать копирование этих атрибутов, если диск его запрещает, а сами файлы копируются как обычно.
 
 > [!TIP]
-> Network Volume привязан к дата-центру. Выбирайте тот, где есть Blackwell-карты с CUDA 13.2. Модели удобно качать на самом дешёвом поде (даже CPU) с этим volume, а потом запускать GPU-под.
+> Network Volume привязан к дата-центру. Выбирайте тот, где есть Blackwell-карты с CUDA 13.4. Модели удобно качать на самом дешёвом поде (даже CPU) с этим volume, а потом запускать GPU-под.
 
 ## Модели: `download-models`
 

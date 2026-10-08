@@ -3,7 +3,7 @@
 FROM ubuntu:26.04
 
 LABEL org.opencontainers.image.title="OneEvil-runpod-ComfyUI" \
-      org.opencontainers.image.description="ComfyUI for RunPod: Ubuntu 26.04, PyTorch nightly cu132, SageAttention, llama-cpp, custom nodes"
+      org.opencontainers.image.description="ComfyUI for RunPod: Ubuntu 26.04, PyTorch nightly cu134, SageAttention, llama-cpp, custom nodes"
 
 # Image without CUDA Toolkit: torch, SageAttention and llama-cpp-python are installed
 # from prebuilt wheel files built on the host (the wheels/ folder next to the Dockerfile,
@@ -23,7 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 python3-venv python3-dev \
         ffmpeg libgl1 libglib2.0-0t64 aria2 \
         openssh-server \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -f /etc/ssh/ssh_host_*
 
 ##############################################################
 # Layer order: rarely changing things first (venv, torch, wheels),
@@ -48,13 +49,7 @@ RUN cat /constraints.txt
 # their nvidia-* dependencies come from the indexes
 RUN --mount=type=bind,source=wheels,target=/wheels \
     pip install --pre --find-links /wheels -r /constraints.txt \
-        --extra-index-url https://download.pytorch.org/whl/nightly/cu132
-
-# Make CUDA libraries from the nvidia-* pip packages visible system-wide:
-# llama-cpp was built with the toolkit and looks for libcudart/libcublas, which only live here in the image
-RUN find /opt/ComfyUI/venv -path '*/nvidia/*' -name 'lib*.so*' -printf '%h\n' | sort -u \
-        > /etc/ld.so.conf.d/nvidia-pip.conf && \
-    cat /etc/ld.so.conf.d/nvidia-pip.conf && ldconfig
+        --extra-index-url https://download.pytorch.org/whl/nightly/cu134
 
 # SageAttention and llama-cpp-python from prebuilt wheels
 RUN --mount=type=bind,source=wheels,target=/wheels \
@@ -122,6 +117,13 @@ RUN set -e; cd custom_nodes; \
 # The kornia fork is installed last so the nodes don't overwrite it
 RUN pip install --no-deps --force-reinstall git+https://github.com/AbhiKhoyani/kornia@main && \
     python -c "import torch; print('torch', torch.__version__)"
+
+# Make CUDA libraries from the nvidia-* pip packages visible system-wide:
+# llama-cpp was built with the toolkit and looks for libcudart/libcublas, which only live here in the image.
+# Runs after all pip installs, so nvidia-* packages pulled in by nvidia-vfx and the nodes are covered too
+RUN find /opt/ComfyUI/venv -path '*/nvidia/*' -name 'lib*.so*' -printf '%h\n' | sort -u \
+        > /etc/ld.so.conf.d/nvidia-pip.conf && \
+    cat /etc/ld.so.conf.d/nvidia-pip.conf && ldconfig
 
 ##############################################################
 # PHASE 6: Autostart (instead of systemd)

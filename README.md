@@ -12,7 +12,7 @@ Every new pod starts ready to go: nothing needs to be reinstalled, models and pr
 |---|---|
 | OS | Ubuntu 26.04 LTS |
 | Python | 3.14 (system) |
-| PyTorch | nightly, CUDA 13.2 (`cu132`) |
+| PyTorch | nightly, CUDA 13.4 (`cu134`) |
 | SageAttention | built for sm_120 (Blackwell) |
 | llama-cpp-python | built with CUDA for sm_120 |
 | ComfyUI | latest `master` at build time |
@@ -49,7 +49,7 @@ ComfyUI is launched with `--enable-manager --use-sage-attention --fast fp16_accu
 > SageAttention and llama-cpp-python are built only for the **sm_120 (Blackwell)** architecture: RTX 5090, RTX PRO 4000/4500/6000 Blackwell. The image will not work on H100, A100, RTX 4090 or other GPUs.
 
 > [!IMPORTANT]
-> PyTorch is built for **CUDA 13.2**, the host needs NVIDIA driver **595+**. On RunPod, enable the **CUDA Version 13.2** filter when creating a pod.
+> PyTorch is built for **CUDA 13.4**, the host needs NVIDIA driver **615+**. On RunPod, enable the **CUDA Version 13.4** filter when creating a pod.
 
 ## Repository layout
 
@@ -71,9 +71,9 @@ ComfyUI is launched with `--enable-manager --use-sage-attention --fast fp16_accu
 ### Build machine requirements
 
 - Ubuntu 26.04 with system Python 3.14 (must match the image)
-- NVIDIA driver 595+ and CUDA Toolkit 13.2 in `/usr/local/cuda-13.2`
+- NVIDIA driver 615+ and CUDA Toolkit 13.4 in `/usr/local/cuda-13.4`
 - clang (`apt install clang`): llama-cpp-python is compiled with it
-- A working ComfyUI in `/opt/ComfyUI` with a venv and PyTorch nightly cu132
+- A working ComfyUI in `/opt/ComfyUI` with a venv and PyTorch nightly cu134
 - Docker and NVIDIA Container Toolkit (for local GPU testing)
 
 ### One command
@@ -229,7 +229,7 @@ With a **Network Volume**, data lives independently of the pod and survives its 
 A Network Volume doesn't allow changing file permissions and timestamps, even for root. Because of that, `shutil.copy2` in nodes would fail with `[Errno 1] Operation not permitted` after the data is already copied. The image includes `fs_compat.py`, which makes Python skip copying these attributes when the disk refuses it; the files themselves are copied as usual.
 
 > [!TIP]
-> A Network Volume is tied to a data center. Pick one that has Blackwell GPUs with CUDA 13.2. It's convenient to download models on the cheapest pod (even a CPU one) with this volume attached, and then launch a GPU pod.
+> A Network Volume is tied to a data center. Pick one that has Blackwell GPUs with CUDA 13.4. It's convenient to download models on the cheapest pod (even a CPU one) with this volume attached, and then launch a GPU pod.
 
 ## Models: `download-models`
 

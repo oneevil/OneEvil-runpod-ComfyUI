@@ -10,7 +10,7 @@ if [ -n "$KEY" ]; then
     mkdir -p ~/.ssh /run/sshd
     grep -qxF "$KEY" ~/.ssh/authorized_keys 2>/dev/null || echo "$KEY" >> ~/.ssh/authorized_keys
     chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys
-    ssh-keygen -A >/dev/null 2>&1          # host keys, if they are not in the image
+    ssh-keygen -A >/dev/null 2>&1          # unique host keys per container (the image ships none)
     if [ -f /run/sshd.pid ] && kill -0 "$(cat /run/sshd.pid)" 2>/dev/null; then
         echo "SSH: sshd is already running"
     elif /usr/sbin/sshd; then
